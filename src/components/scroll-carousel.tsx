@@ -34,10 +34,8 @@ import React, {
   const useFeatureAnimations = (
     containerRef: React.RefObject<HTMLDivElement>,
     scrollContainerRef: React.RefObject<HTMLDivElement>,
-    scrollContainerRef2: React.RefObject<HTMLDivElement>,
     progressBarRef: React.RefObject<HTMLDivElement>,
     cardRefs: React.MutableRefObject<HTMLDivElement[]>,
-    cardRefs2: React.MutableRefObject<HTMLDivElement[]>,
     isDesktop: boolean,
     maxScrollHeight?: number
   ) => {
@@ -46,20 +44,14 @@ import React, {
         // Desktop horizontal scroll logic
         if (isDesktop) {
           const scrollWidth1 = scrollContainerRef.current?.scrollWidth || 0;
-          const scrollWidth2 = scrollContainerRef2.current?.scrollWidth || 0;
           const containerWidth = containerRef.current?.offsetWidth || 0;
           const cardWidth = cardRefs.current[0]?.offsetWidth || 0;
           const viewportOffset = (containerWidth - cardWidth) / 2;
   
           const finalOffset1 = scrollWidth1 - containerWidth + viewportOffset;
-          const finalOffset2 = scrollWidth2 - containerWidth + viewportOffset;
   
           // Use the provided maxScrollHeight or the calculated offset as the scroll distance
           const scrollDistance = maxScrollHeight || finalOffset1;
-  
-          gsap.set(scrollContainerRef2.current, {
-            x: -finalOffset2 + viewportOffset * 2,
-          });
   
           gsap
             .timeline({
@@ -77,17 +69,6 @@ import React, {
               { x: -finalOffset1 + viewportOffset, ease: "none" }
             );
   
-          gsap
-            .timeline({
-              scrollTrigger: {
-                trigger: containerRef.current,
-                start: "top top",
-                end: () => `+=${scrollDistance}`,
-                scrub: 1,
-              },
-            })
-            .to(scrollContainerRef2.current, { x: viewportOffset, ease: "none" });
-  
           gsap.to(progressBarRef.current, {
             width: "100%",
             ease: "none",
@@ -100,8 +81,7 @@ import React, {
           });
         } else {
           // Mobile vertical scroll logic
-          const allCards = [...cardRefs.current, ...cardRefs2.current];
-          allCards.forEach((card, index) => {
+          cardRefs.current.forEach((card, index) => {
             if (card) {
               gsap.fromTo(
                 card,
@@ -116,7 +96,7 @@ import React, {
                   ease: "power2.out",
                   scrollTrigger: {
                     trigger: card,
-                    start: "top 0%",
+                    start: "top 80%",
                     toggleActions: "play none none none",
                     once: true,
                   },
@@ -138,14 +118,9 @@ import React, {
     ({ features, className, maxScrollHeight }, ref) => {
       const containerRef = useRef<HTMLDivElement>(null);
       const scrollContainerRef = useRef<HTMLDivElement>(null);
-      const scrollContainerRef2 = useRef<HTMLDivElement>(null);
       const progressBarRef = useRef<HTMLDivElement>(null);
       const cardRefs = useRef<HTMLDivElement[]>([]);
-      const cardRefs2 = useRef<HTMLDivElement[]>([]);
       const [isDesktop, setIsDesktop] = useState(false);
-  
-      // Dynamic sorting for the second row of cards
-      const features2 = [...features].sort(() => Math.random() - 0.5);
   
       useEffect(() => {
         const checkDesktop = () => {
@@ -159,10 +134,8 @@ import React, {
       useFeatureAnimations(
         containerRef,
         scrollContainerRef,
-        scrollContainerRef2,
         progressBarRef,
         cardRefs,
-        cardRefs2,
         isDesktop,
         maxScrollHeight
       );
@@ -177,48 +150,77 @@ import React, {
             ref={(el: HTMLDivElement | null) => {
               if (el) refs.current[index] = el;
             }}
-            className="feature-card flex-shrink-0 w-full md:w-full  h-full
-            z-10 gap-4  group relative transition-all duration-300 ease-in-out"
+            className="feature-card flex-shrink-0 w-full md:w-full h-full
+            z-10 gap-4 group relative transition-all duration-300 ease-in-out"
           >
+            {/* Main Card Container */}
             <div
               className={cn(
-                `relative h-full p-4 lg:p-8 rounded-3xl backdrop-blur-sm 
+                `relative h-full p-4 lg:p-8 rounded-3xl 
                 flex items-center justify-center z-10 
                 transition-all duration-300 my-4`,
                 `backdrop-blur-lg border text-black dark:text-white`,
-                "group-hover:scale-105 centered:scale-105"
+                "group-hover:scale-105 centered:scale-105",
+                // Different heights for mobile vs desktop
+                "h-[400px] md:h-[500px]" // Adjust these heights as needed
               )}
             >
-              <img
-                src={
-                  feature.image ||
-                  "https://images.pexels.com/photos/9934462/pexels-photo-9934462.jpeg"
-                }
-                alt=""
-                className="absolute inset-0 w-full h-full 
-                object-cover z-[-1] rounded-3xl "
-              />
-              {/* <RippleLoader className="!absolute z-[-1]" icon={feature.icon} /> */}
-              <div className="absolute bottom-4 z-10 w-full px-4">
+              {/* Image Container - Full image on desktop, overlay on mobile */}
+              <div className="absolute inset-0 w-full h-full z-0 rounded-3xl overflow-hidden">
+                <img
+                  src={
+                    feature.image ||
+                    "https://images.pexels.com/photos/9934462/pexels-photo-9934462.jpeg"
+                  }
+                  alt={feature.title}
+                  className={cn(
+                    "w-full h-full object-cover",
+                    // On mobile, add blur and dark overlay to make text readable
+                    "md:blur-0",
+                    !isDesktop && "blur-sm brightness-75"
+                  )}
+                />
+              </div>
+  
+              {/* Content Overlay - Always visible but positioned differently */}
+              <div
+                className={cn(
+                  "z-10 relative w-full",
+                  // Different positioning for mobile vs desktop
+                  isDesktop
+                    ? "absolute bottom-8 left-8 right-8"
+                    : "absolute inset-0 flex items-end p-6"
+                )}
+              >
                 <div
                   className={cn(
-                    `flex flex-col justify-end h-full opacity-100 translate-y-4 transition-all duration-300 ease-out text-center`
+                    `flex flex-col justify-end transition-all duration-300 ease-out`,
+                    isDesktop
+                      ? "text-left bg-black/40 backdrop-blur-sm p-6 rounded-2xl border border-white/20"
+                      : "text-center w-full"
                   )}
                 >
-                  <h3 className="text-2xl mb-0 font-bold text-white transition-all duration-300">
+                  <h3
+                    className={cn(
+                      "font-bold text-white transition-all duration-300",
+                      isDesktop ? "text-3xl mb-2" : "text-2xl mb-1"
+                    )}
+                  >
                     {feature.title}
                   </h3>
-                  <p className="text-white text-xs mb-4 opacity-60">
+                  <p
+                    className={cn(
+                      "text-white",
+                      isDesktop ? "text-base opacity-90" : "text-sm opacity-80"
+                    )}
+                  >
                     {feature.description}
                   </p>
-                  {/* <img
-                    src={feature.image}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover z-[-1] rounded-3xl blur-[5px]"
-                  /> */}
                 </div>
               </div>
-              <div className="pointer-events-none absolute inset-0 transition-all duration-300 group-hover:bg-black/5 dark:group-hover:bg-white/5 centered:bg-black/5 dark:centered:bg-white/5 rounded-2xl group-hover:blur-md" />
+  
+              {/* Hover Overlay */}
+              <div className="pointer-events-none absolute inset-0 transition-all duration-300 group-hover:bg-black/5 dark:group-hover:bg-white/5 centered:bg-black/5 dark:centered:bg-white/5 rounded-2xl" />
             </div>
           </div>
         ));
@@ -243,13 +245,6 @@ import React, {
               items-center h-full px-6 md:px-0"
             >
               {renderFeatureCards(features, cardRefs)}
-            </div>
-  
-            <div
-              ref={scrollContainerRef2}
-              className="flex flex-col md:flex-row gap-8 items-center h-full px-6 md:px-0 hidden xl:flex"
-            >
-              {renderFeatureCards(features2, cardRefs2)}
             </div>
   
             {isDesktop && (
@@ -300,4 +295,3 @@ import React, {
   ScrollCarousel.displayName = "ScrollCarousel";
   
   export default ScrollCarousel;
-  
